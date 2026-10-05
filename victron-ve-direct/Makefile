@@ -14,7 +14,14 @@ define Package/victron-ve-direct
   CATEGORY:=Network
   TITLE:=Victron Energy VE.Direct USB telemetry publisher
   URL:=https://github.com/jacohanekom/victron-ve-direct-openwrt
-  DEPENDS:=+libavahi-client +libuci +libstdcpp +libpthread
+  # kmod-usb-serial-{ftdi,cp210x}: OpenWrt ships no USB-serial chip
+  # drivers by default, so without these the kernel never creates a
+  # /dev/ttyUSB* node for the cable at all ("open(/dev/ttyUSB0): No
+  # such file or directory" even though the cable is plugged in).
+  # Victron VE.Direct cables use either an FTDI FT232R or a SiLabs
+  # CP210x chip, so both are pulled in rather than guessing which.
+  DEPENDS:=+libavahi-client +libuci +libstdcpp +libpthread \
+	+kmod-usb-serial-ftdi +kmod-usb-serial-cp210x
 endef
 
 define Package/victron-ve-direct/description

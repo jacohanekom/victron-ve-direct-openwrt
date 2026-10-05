@@ -36,7 +36,11 @@ than built standalone:
 ## Requirements
 
 - An OpenWrt target with a free USB port
-- A VE.Direct USB-to-serial cable (FTDI FT232R or SiLabs CP210x)
+- A VE.Direct USB-to-serial cable (FTDI FT232R or SiLabs CP210x) -- the
+  `victron-ve-direct` package pulls in both `kmod-usb-serial-ftdi` and
+  `kmod-usb-serial-cp210x` automatically, since OpenWrt ships no
+  USB-serial chip drivers by default (without one, the kernel never
+  creates a `/dev/ttyUSB*` node for the cable at all)
 - The `luci` feed enabled (default in `feeds.conf.default`) -- needed to
   build `luci-app-victron-ve-direct`, which includes `feeds/luci/luci.mk`
 
