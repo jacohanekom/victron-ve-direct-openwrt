@@ -11,8 +11,14 @@ rpc_status() {
 	config_load victron-ve-direct
 	config_get ctrl_port output ctrl_port 8562
 
+	# No -w timeout: that flag needs BusyBox's NC_EXTRA config, which
+	# defaults to off in stock OpenWrt builds -- using it silently
+	# no-ops nc on an unmodified router image instead of failing
+	# loudly, since stderr is discarded below. victron_ve_direct
+	# always responds and closes immediately, so a bare connection is
+	# safe without one.
 	local reply
-	reply="$(printf 'status\n' | nc -w 3 127.0.0.1 "$ctrl_port" 2>/dev/null)"
+	reply="$(printf 'status\n' | nc 127.0.0.1 "$ctrl_port" 2>/dev/null)"
 
 	json_init
 	if [ -z "$reply" ]; then
