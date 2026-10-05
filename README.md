@@ -188,7 +188,8 @@ with:
 - A live status table (device identity, voltage/current/power, charge
   state, errors -- whatever the daemon currently has, via a
   `luci.victron-ve-direct` rpcd backend that queries `ctrl_port`
-  directly, same as `echo status | nc`).
+  directly, same as `echo status | nc`), auto-refreshing on LuCI's own
+  configured poll interval without disturbing the settings form below it.
 - A standard UCI form below it for editing `device`, `output`,
   `control`, and `mdns` settings, which requires Save & Apply (triggers
   an automatic service reload).

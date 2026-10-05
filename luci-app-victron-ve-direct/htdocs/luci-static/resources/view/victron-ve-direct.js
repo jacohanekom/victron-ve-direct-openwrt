@@ -1,5 +1,7 @@
 'use strict';
+'require dom';
 'require form';
+'require poll';
 'require rpc';
 'require view';
 
@@ -81,12 +83,23 @@ return view.extend({
 
 		o = s.option(form.Value, 'name', _('Service instance name'));
 
+		const statusNode = E('div', { 'class': 'cbi-section' }, this.renderStatusChildren(status));
+
+		// Refresh just the status block on LuCI's own configured poll
+		// interval, without touching (or losing in-progress edits in)
+		// the settings form below it.
+		poll.add(L.bind(function() {
+			return callStatus().then(L.bind(function(newStatus) {
+				dom.content(statusNode, this.renderStatusChildren(newStatus));
+			}, this));
+		}, this));
+
 		return m.render().then(L.bind(function(mapNode) {
-			return E('div', {}, [ this.renderStatus(status), mapNode ]);
+			return E('div', {}, [ statusNode, mapNode ]);
 		}, this));
 	},
 
-	renderStatus: function(status) {
+	renderStatusChildren: function(status) {
 		const ok = status && (status.ok === 'true' || status.ok === true);
 
 		const rows = STATUS_ORDER
@@ -98,11 +111,11 @@ return view.extend({
 				]);
 			});
 
-		return E('div', { 'class': 'cbi-section' }, [
+		return [
 			E('h3', {}, _('Live status')),
 			ok
 				? E('table', { 'class': 'table' }, rows)
 				: E('p', {}, (status && status.error) || _('No data yet.'))
-		]);
+		];
 	}
 });
