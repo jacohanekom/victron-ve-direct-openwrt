@@ -1,0 +1,59 @@
+#!/bin/sh
+# TechRef: https://openwrt.org/docs/techref/rpcd
+#
+# ubus -S call luci.victron-ve-direct status
+
+. /lib/functions.sh
+. /usr/share/libubox/jshn.sh
+
+rpc_status() {
+	local ctrl_port
+	config_load victron-ve-direct
+	config_get ctrl_port output ctrl_port 8562
+
+	local reply
+	reply="$(printf 'status\n' | nc -w 3 127.0.0.1 "$ctrl_port" 2>/dev/null)"
+
+	json_init
+	if [ -z "$reply" ]; then
+		json_add_boolean ok 0
+		json_add_string error "no reply from victron-ve-direct on control port $ctrl_port"
+		json_dump
+		json_cleanup
+		return
+	fi
+
+	# Input must come via redirection, not a pipe -- a pipe would run this
+	# loop in a subshell, and jshn's json_add_* calls build up state in
+	# shell variables, which would be lost once that subshell exits.
+	local line key value
+	while IFS= read -r line; do
+		[ -n "$line" ] || continue
+		key="${line%%=*}"
+		value="${line#*=}"
+		[ "$key" != "$line" ] || continue
+		json_add_string "$key" "$value"
+	done <<EOF
+$reply
+EOF
+
+	json_dump
+	json_cleanup
+}
+
+case "$1" in
+	list)
+		json_init
+		json_add_object status
+		json_close_object
+		json_dump
+		json_cleanup
+		;;
+	call)
+		case "$2" in
+			status)
+				rpc_status
+				;;
+		esac
+		;;
+esac

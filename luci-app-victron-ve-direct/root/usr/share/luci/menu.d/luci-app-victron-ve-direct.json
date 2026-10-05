@@ -1,0 +1,12 @@
+{
+	"admin/services/victron-ve-direct": {
+		"title": "Victron VE.Direct",
+		"action": {
+			"type": "view",
+			"path": "victron-ve-direct"
+		},
+		"depends": {
+			"acl": ["luci-app-victron-ve-direct"]
+		}
+	}
+}

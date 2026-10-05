@@ -1,0 +1,14 @@
+{
+	"luci-app-victron-ve-direct": {
+		"description": "Grant UCI and ubus access for luci-app-victron-ve-direct",
+		"read": {
+			"uci": ["victron-ve-direct"],
+			"ubus": {
+				"luci.victron-ve-direct": ["status"]
+			}
+		},
+		"write": {
+			"uci": ["victron-ve-direct"]
+		}
+	}
+}
