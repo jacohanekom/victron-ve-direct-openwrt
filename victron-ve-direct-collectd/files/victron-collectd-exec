@@ -1,0 +1,70 @@
+#!/bin/sh
+# collectd "exec" plugin forwarder for victron-ve-direct.
+#
+# collectd starts this once as a persistent child process and reads
+# PUTVAL lines from its stdout indefinitely for as long as it keeps
+# running -- see https://collectd.org/documentation/manpages/collectd-exec.5.shtml
+#
+# COLLECTD_HOSTNAME is set by collectd itself when it execs this
+# script. INTERVAL below is this script's own poll cadence against
+# victron-ve-direct's ctrl_port, independent of collectd's global
+# Interval setting -- Exec-plugin values are push-based, not
+# scheduler-polled, so each PUTVAL line carries its own interval=.
+#
+# CS/ERR (charge state / error code) are categorical, not graphed --
+# only the numeric telemetry fields are forwarded.
+
+. /lib/functions.sh
+
+INTERVAL=30
+HOSTNAME="${COLLECTD_HOSTNAME:-$(cat /proc/sys/kernel/hostname 2> /dev/null)}"
+
+emit() {
+	# $1 = type[-instance], $2 = value
+	[ -n "$2" ] || return
+	printf 'PUTVAL %s/victron/%s interval=%s N:%s\n' "$HOSTNAME" "$1" "$INTERVAL" "$2"
+}
+
+while :; do
+	# Re-read on every iteration (cheap) so a ctrl_port change takes
+	# effect without needing to restart this forwarder separately.
+	config_load victron-ve-direct
+	config_get ctrl_port output ctrl_port 8562
+
+	reply="$(printf 'status\n' | nc 127.0.0.1 "$ctrl_port" 2> /dev/null)"
+
+	if [ -n "$reply" ]; then
+		V= I= VPV= PPV= SOC= TTG= H20=
+
+		# Input must come via redirection, not a pipe -- a pipe would
+		# run this loop in a subshell, losing the variables it sets.
+		while IFS= read -r line; do
+			case "$line" in
+			V=*) V="${line#V=}" ;;
+			I=*) I="${line#I=}" ;;
+			VPV=*) VPV="${line#VPV=}" ;;
+			PPV=*) PPV="${line#PPV=}" ;;
+			SOC=*) SOC="${line#SOC=}" ;;
+			TTG=*) TTG="${line#TTG=}" ;;
+			H20=*) H20="${line#H20=}" ;;
+			esac
+		done << EOF
+$reply
+EOF
+
+		emit voltage-battery "$V"
+		emit voltage-panel "$VPV"
+		emit current-battery "$I"
+		emit power-panel "$PPV"
+		emit percent-soc "$SOC"
+		emit energy-yield_today "$H20"
+
+		# duration's DS is named "seconds" (collectd types.db), but
+		# TTG is reported in minutes.
+		if [ -n "$TTG" ]; then
+			emit duration-ttg "$((TTG * 60))"
+		fi
+	fi
+
+	sleep "$INTERVAL"
+done

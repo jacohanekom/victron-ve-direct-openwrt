@@ -26,12 +26,17 @@ this port is a straight recompile against OpenWrt's own libraries.
 - **Phoenix Inverter** -- 12/24/48V, 250 VA through 1200 VA
 - Any other VE.Direct device -- raw fields are still emitted
 
-This repo holds two packages, meant to be added as a custom feed rather
-than built standalone:
+This repo holds three packages, meant to be added as a custom feed
+rather than built standalone:
 
 - `victron-ve-direct` -- the daemon, init script, and default UCI config.
 - `luci-app-victron-ve-direct` -- a LuCI page (`Services -> Victron
   VE.Direct`) that shows live telemetry and edits the UCI config.
+- `victron-ve-direct-collectd` (optional) -- feeds telemetry into
+  collectd so `luci-app-statistics` graphs and retains history for it.
+  Not installed by default: `collectd` + `rrdtool` + `luci-app-statistics`
+  is a fairly heavy dependency chain for a flash-constrained router, so
+  this stays opt-in rather than bundled into the LuCI app above.
 
 ## Requirements
 
@@ -62,12 +67,14 @@ Then:
 make menuconfig
 # Network  --->  <*> victron-ve-direct
 # LuCI  --->  3. Applications  --->  <*> luci-app-victron-ve-direct
+# Network  --->  <*> victron-ve-direct-collectd   (optional, see "Historical graphing" below)
 
 make package/victron-ve-direct/compile V=s
 make package/luci-app-victron-ve-direct/compile V=s
+make package/victron-ve-direct-collectd/compile V=s
 ```
 
-Both `.ipk`s land in `bin/packages/<arch>/victron-ve-direct/`. CI builds
+All `.ipk`s land in `bin/packages/<arch>/victron-ve-direct/`. CI builds
 against OpenWrt 24.10.4 (still `opkg`/`.ipk` -- 25.12 switched the
 default package format to `apk`), targeting `aarch64_cortex-a53` (Pi
 3/4-class boards, this project suite's usual hardware) and `x86_64` as a
@@ -222,3 +229,40 @@ dmesg | grep -i ttyUSB
 # or
 ls /dev/ttyUSB* /dev/ttyACM*
 ```
+
+## Historical graphing
+
+`victron-ve-direct-collectd` is an optional package that feeds
+telemetry into [collectd](https://collectd.org/)'s `exec` plugin, so
+`luci-app-statistics` graphs and retains history for it under
+`Statistics -> Graphs -> victron`:
+
+- Voltage (battery + panel, one graph, two lines)
+- Battery current
+- Panel power
+- State of charge (BMV battery monitors only -- MPPT/inverter don't
+  report SOC, so this graph stays empty on those)
+- Time to go (BMV only, same caveat)
+- Yield today -- resets to 0 daily, so it shows as a sawtooth over
+  multi-day timespans; that's expected, not a bug
+
+Charge state and error code are deliberately not graphed -- they're
+categorical codes, not meaningful as line charts. They're still
+visible on the live status table on the main `victron-ve-direct` LuCI
+page.
+
+Installing `victron-ve-direct-collectd` registers itself with collectd
+automatically (via `/etc/uci-defaults`, idempotent on reinstall) --
+no manual `Statistics -> Setup -> Exec` steps needed. It does this by
+adding `collectd_exec` / `collectd_exec_input` sections to
+`/etc/config/luci_statistics`, a file owned by `luci-app-statistics`,
+not this package -- if you've already customized collectd settings
+there, this only adds to it, it doesn't replace the file.
+
+The forwarder (`/usr/libexec/victron-collectd-exec`) is a persistent
+script collectd itself starts and keeps running (not a procd service);
+it polls `victron-ve-direct`'s `ctrl_port` every 30 seconds and emits
+[collectd exec-protocol](https://collectd.org/documentation/manpages/collectd-exec.5.shtml)
+`PUTVAL` lines, independent of collectd's own global `Interval`
+setting. If you change `output.ctrl_port` in `/etc/config/victron-ve-direct`,
+the forwarder picks it up on its next poll without needing a restart.

@@ -1,0 +1,28 @@
+#!/bin/sh
+# Registers victron-collectd-exec with collectd's exec plugin by adding
+# the needed sections to /etc/config/luci_statistics (owned by
+# luci-app-statistics, not this package) -- idempotent, safe to re-run
+# on reinstall. Runs on every install (OpenWrt processes
+# /etc/uci-defaults/* via the generic postinst, not just first boot).
+
+CMDLINE="/usr/libexec/victron-collectd-exec"
+
+uci -q get luci_statistics.collectd_exec > /dev/null ||
+	uci set luci_statistics.collectd_exec='statistics'
+uci set luci_statistics.collectd_exec.enable='1'
+
+if ! uci show luci_statistics 2> /dev/null | grep -qF ".cmdline='$CMDLINE'"; then
+	section="$(uci add luci_statistics collectd_exec_input)"
+	uci set "luci_statistics.${section}.cmdline" "$CMDLINE"
+	uci set "luci_statistics.${section}.cmduser" "nobody"
+	uci set "luci_statistics.${section}.cmdgroup" "nogroup"
+fi
+
+uci commit luci_statistics
+
+# Apply immediately rather than waiting for the next manual Save &
+# Apply in LuCI -- this script runs at package-install time on an
+# already-running router, not just at first boot.
+/etc/init.d/luci_statistics enabled && /etc/init.d/luci_statistics restart > /dev/null 2>&1
+
+exit 0

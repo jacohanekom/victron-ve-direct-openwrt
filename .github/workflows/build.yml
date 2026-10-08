@@ -34,7 +34,12 @@ jobs:
         uses: openwrt/gh-action-sdk@v11
         env:
           ARCH: ${{ matrix.arch }}
-          PACKAGES: victron-ve-direct luci-app-victron-ve-direct
+          # victron-ve-direct-collectd pulls in luci-app-statistics,
+          # which pulls in collectd itself plus several of its plugins
+          # (rrdtool, cpu, memory, interface, load, network, iwinfo) --
+          # a much bigger dependency chain to compile than the other
+          # two packages, but needed to verify it actually builds.
+          PACKAGES: victron-ve-direct luci-app-victron-ve-direct victron-ve-direct-collectd
           V: s
 
       - uses: actions/upload-artifact@v4
