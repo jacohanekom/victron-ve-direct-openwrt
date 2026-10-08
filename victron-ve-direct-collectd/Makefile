@@ -26,7 +26,10 @@ define Package/victron-ve-direct-collectd/description
   via its exec plugin, so luci-app-statistics graphs and retains
   history for it under Statistics -> Graphs. Registers itself with
   collectd automatically on install via /etc/uci-defaults -- no manual
-  Statistics -> Setup steps needed.
+  Statistics -> Setup steps needed. Also enables RRD backup/restore
+  across reboots (luci-app-statistics' DataDir otherwise lives in a
+  RAM-backed tmpfs, wiped on every restart) plus an hourly cron
+  snapshot on top of the automatic clean-shutdown one.
 endef
 
 # Files-only package: nothing to fetch or build.

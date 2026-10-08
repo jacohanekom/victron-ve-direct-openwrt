@@ -266,3 +266,31 @@ it polls `victron-ve-direct`'s `ctrl_port` every 30 seconds and emits
 `PUTVAL` lines, independent of collectd's own global `Interval`
 setting. If you change `output.ctrl_port` in `/etc/config/victron-ve-direct`,
 the forwarder picks it up on its next poll without needing a restart.
+
+### Persistence across reboots
+
+`luci-app-statistics`' default RRD location (`DataDir`) is `/tmp/rrd`
+-- a RAM-backed `tmpfs`, wiped on every reboot. Without extra setup,
+all graphed history (every plugin's, not just victron's) is lost on
+restart; that's stock OpenWrt behavior, not specific to this package.
+
+Installing `victron-ve-direct-collectd` fixes this by enabling
+`luci-app-statistics`' own existing (but off-by-default) backup/restore
+mechanism, rather than reimplementing one:
+
+- `luci_statistics.collectd_rrdtool.backup` is set to `1`. This makes
+  `/etc/init.d/luci_statistics` tar up the whole RRD tree to
+  `/etc/luci_statistics/rrdbackup.tgz` (on persistent flash, under
+  `/etc`) whenever it stops -- which already happens automatically on
+  every clean reboot and `sysupgrade` -- and restore it on the next
+  boot, before collectd starts.
+- An hourly cron job (`/etc/init.d/luci_statistics backup`) is added
+  on top, so an unclean crash or power loss only risks up to an hour
+  of history, not everything since the last clean reboot.
+
+This backs up the *entire* RRD tree, every collectd plugin's data, not
+just victron's -- there's no way to back up a single plugin's subset
+via this mechanism. Writing to flash hourly is a deliberate trade-off
+between data-loss window and flash wear; adjust or remove the cron
+line in `/etc/crontabs/root` if you'd rather tune that balance
+differently.

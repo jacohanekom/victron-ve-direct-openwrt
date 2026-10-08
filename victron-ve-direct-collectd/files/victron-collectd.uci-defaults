@@ -18,11 +18,33 @@ if ! uci show luci_statistics 2> /dev/null | grep -qF ".cmdline='$CMDLINE'"; the
 	uci set "luci_statistics.${section}.cmdgroup" "nogroup"
 fi
 
+# Persist RRD history across reboots -- luci-app-statistics' own
+# DataDir default is /tmp/rrd, a RAM-backed tmpfs that's wiped on
+# every reboot, so without this all graphed history (not just
+# victron's -- this backs up the whole RRD tree, every plugin) is
+# lost on restart. Flips on luci-app-statistics' *own* existing
+# backup/restore mechanism (/etc/init.d/luci_statistics backup,
+# already wired to run on stop_service() and restore on
+# start_service()) rather than reimplementing one.
+uci set luci_statistics.collectd_rrdtool.backup='1'
+
 uci commit luci_statistics
 
 # Apply immediately rather than waiting for the next manual Save &
 # Apply in LuCI -- this script runs at package-install time on an
 # already-running router, not just at first boot.
 /etc/init.d/luci_statistics enabled && /etc/init.d/luci_statistics restart > /dev/null 2>&1
+
+# A clean reboot/sysupgrade already triggers a backup via
+# stop_service() above, but that's no help against an unclean crash
+# or power loss. Add an hourly cron snapshot too, so at most an hour
+# of history is ever at risk -- idempotent, safe on reinstall.
+CRON_LINE="0 * * * * /etc/init.d/luci_statistics backup"
+CRONTAB="/etc/crontabs/root"
+
+if ! grep -qF "$CRON_LINE" "$CRONTAB" 2> /dev/null; then
+	echo "$CRON_LINE" >> "$CRONTAB"
+	/etc/init.d/cron enabled && /etc/init.d/cron restart > /dev/null 2>&1
+fi
 
 exit 0
