@@ -80,6 +80,15 @@ default package format to `apk`), targeting `aarch64_cortex-a53` (Pi
 3/4-class boards, this project suite's usual hardware) and `x86_64` as a
 fast generic sanity check.
 
+CI deliberately does not build `victron-ve-direct-collectd`: it has no
+compiled code of its own, but depends on `luci-app-statistics`, which
+pulls in collectd -- and building collectd from source drags in a much
+larger transitive dependency tree than its own plugin list suggests
+(curl, neon, mariadb-connector-c, mosquitto, nut, unbound,
+libwebsockets...), taking 60-90+ minutes and exposing every run to
+unrelated upstream mirror flakiness. Disproportionate cost for a
+package with nothing of its own to actually verify compiles.
+
 ## Configuration
 
 Edit `/etc/config/victron-ve-direct` (or use LuCI's `Services -> Victron

@@ -14,8 +14,11 @@ jobs:
     # network can silently stall for 1h+ with zero log output, since
     # -nv suppresses wget's own progress reporting -- this isn't
     # caused by anything in this repo, just fail fast instead of
-    # burning hours of runner time on a dead mirror.
-    timeout-minutes: 35
+    # burning hours of runner time on a dead mirror. Sized against
+    # this matrix's two lightweight packages (~10-17m when healthy),
+    # not the much heavier victron-ve-direct-collectd (see PACKAGES
+    # below), which is deliberately excluded from CI.
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -39,15 +42,22 @@ jobs:
 
       - name: Build via OpenWrt SDK
         uses: openwrt/gh-action-sdk@v11
-        timeout-minutes: 30
+        timeout-minutes: 15
         env:
           ARCH: ${{ matrix.arch }}
-          # victron-ve-direct-collectd pulls in luci-app-statistics,
-          # which pulls in collectd itself plus several of its plugins
-          # (rrdtool, cpu, memory, interface, load, network, iwinfo) --
-          # a much bigger dependency chain to compile than the other
-          # two packages, but needed to verify it actually builds.
-          PACKAGES: victron-ve-direct luci-app-victron-ve-direct victron-ve-direct-collectd
+          # victron-ve-direct-collectd is deliberately NOT built here.
+          # It has zero compiled code of its own (a shell script, a
+          # uci-defaults script, a JS definitions file -- pure
+          # install-only package), but it DEPENDS on luci-app-statistics,
+          # which pulls in collectd itself. Observed in practice:
+          # building collectd from source drags in a much larger
+          # transitive dependency tree than its own plugin list
+          # suggests (curl, neon, mariadb-connector-c, mosquitto, nut,
+          # unbound, libwebsockets...), taking 60-90+ minutes and
+          # exposing every run to unrelated upstream mirror flakiness
+          # -- disproportionate cost for a package with nothing of
+          # its own to actually verify compiles.
+          PACKAGES: victron-ve-direct luci-app-victron-ve-direct
           V: s
 
       - uses: actions/upload-artifact@v4
