@@ -13,9 +13,9 @@ uci set luci_statistics.collectd_exec.enable='1'
 
 if ! uci show luci_statistics 2> /dev/null | grep -qF ".cmdline='$CMDLINE'"; then
 	section="$(uci add luci_statistics collectd_exec_input)"
-	uci set "luci_statistics.${section}.cmdline" "$CMDLINE"
-	uci set "luci_statistics.${section}.cmduser" "nobody"
-	uci set "luci_statistics.${section}.cmdgroup" "nogroup"
+	uci set "luci_statistics.${section}.cmdline=$CMDLINE"
+	uci set "luci_statistics.${section}.cmduser=nobody"
+	uci set "luci_statistics.${section}.cmdgroup=nogroup"
 fi
 
 # Persist RRD history across reboots -- luci-app-statistics' own
