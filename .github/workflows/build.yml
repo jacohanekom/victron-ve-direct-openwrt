@@ -9,6 +9,13 @@ jobs:
   build:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    # Backstop for a hung SDK download (observed: setup.sh's "wget -nv"
+    # fetching the SDK tarball from downloads.openwrt.org's mirror
+    # network can silently stall for 1h+ with zero log output, since
+    # -nv suppresses wget's own progress reporting -- this isn't
+    # caused by anything in this repo, just fail fast instead of
+    # burning hours of runner time on a dead mirror.
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
@@ -32,6 +39,7 @@ jobs:
 
       - name: Build via OpenWrt SDK
         uses: openwrt/gh-action-sdk@v11
+        timeout-minutes: 30
         env:
           ARCH: ${{ matrix.arch }}
           # victron-ve-direct-collectd pulls in luci-app-statistics,
