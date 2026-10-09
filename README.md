@@ -80,14 +80,19 @@ default package format to `apk`), targeting `aarch64_cortex-a53` (Pi
 3/4-class boards, this project suite's usual hardware) and `x86_64` as a
 fast generic sanity check.
 
-CI deliberately does not build `victron-ve-direct-collectd`: it has no
-compiled code of its own, but depends on `luci-app-statistics`, which
-pulls in collectd -- and building collectd from source drags in a much
-larger transitive dependency tree than its own plugin list suggests
-(curl, neon, mariadb-connector-c, mosquitto, nut, unbound,
-libwebsockets...), taking 60-90+ minutes and exposing every run to
-unrelated upstream mirror flakiness. Disproportionate cost for a
-package with nothing of its own to actually verify compiles.
+`victron-ve-direct-collectd` is built by a **separate** workflow,
+[`build-collectd.yml`](.github/workflows/build-collectd.yml), not the
+main one above: it has no compiled code of its own, but depends on
+`luci-app-statistics`, which pulls in collectd -- and building
+collectd from source drags in a much larger transitive dependency tree
+than its own plugin list suggests (curl, neon, mariadb-connector-c,
+mosquitto, nut, unbound, libwebsockets...), taking 60-90+ minutes.
+Running that on every push would slow down and risk the main (fast,
+reliable) build, so `build-collectd.yml` only runs when files under
+`victron-ve-direct-collectd/` change, on `v*` tags, or on demand
+(Actions tab -> "Build collectd package" -> "Run workflow"). Grab the
+resulting `.ipk` from that workflow run's artifacts, or from a tagged
+release.
 
 ## Configuration
 
@@ -244,7 +249,15 @@ ls /dev/ttyUSB* /dev/ttyACM*
 `victron-ve-direct-collectd` is an optional package that feeds
 telemetry into [collectd](https://collectd.org/)'s `exec` plugin, so
 `luci-app-statistics` graphs and retains history for it under
-`Statistics -> Graphs -> victron`:
+`Statistics -> Graphs -> victron`. Install the `.ipk` from
+[`build-collectd.yml`](.github/workflows/build-collectd.yml) (see
+"Building" above) with:
+
+```sh
+opkg install victron-ve-direct_*.ipk victron-ve-direct-collectd_*.ipk
+```
+
+It graphs:
 
 - Voltage (battery + panel, one graph, two lines)
 - Battery current

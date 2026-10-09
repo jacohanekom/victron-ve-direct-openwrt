@@ -1,0 +1,74 @@
+name: Build collectd package
+
+# Separate from build.yml deliberately: victron-ve-direct-collectd has
+# no compiled code of its own, but depends on luci-app-statistics,
+# which pulls in collectd -- and building collectd from source drags
+# in a much larger transitive dependency tree than its own plugin list
+# suggests (curl, neon, mariadb-connector-c, mosquitto, nut, unbound,
+# libwebsockets...), observed taking 60-90+ minutes. Running that on
+# every push would slow down and risk the main (fast, reliable) build,
+# so this only runs on v* tags, on pull requests that touch this
+# package's files, or on demand -- never on an ordinary branch push.
+#
+# Note: a single push trigger can't OR "any v* tag" with "paths
+# changed on a branch" -- tags/branches and paths combine as AND
+# within one push trigger, so a v* tag cut from a commit that doesn't
+# touch this package's files would then silently not fire, defeating
+# the point of tagging a release. Simplest correct fix: no path filter
+# on push at all (any v* tag always fires; ordinary branch pushes
+# never auto-trigger this at all, avoiding the cost on every commit),
+# relying on pull_request.paths and workflow_dispatch to cover
+# verification and ad-hoc branch testing instead.
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+    paths:
+      - 'victron-ve-direct-collectd/**'
+      - '.github/workflows/build-collectd.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: aarch64_cortex-a53 (Pi 3/4-class)
+    runs-on: ubuntu-latest
+    # Generous relative to build.yml's 20m: this package's own install
+    # step is trivial, but collectd's dependency tree has been
+    # observed taking 60-90+ minutes to fetch and compile.
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build via OpenWrt SDK
+        uses: openwrt/gh-action-sdk@v11
+        timeout-minutes: 110
+        env:
+          # Only one arch here, matching this project suite's actual
+          # hardware target -- there's no compiled code of this
+          # package's own that would differ between architectures, so
+          # a second arch would only double the cost for no extra
+          # coverage.
+          ARCH: aarch64_cortex-a53-v24.10.4
+          # victron-ve-direct must be listed explicitly even though
+          # victron-ve-direct-collectd DEPENDS on it -- it lives in
+          # our own feed, not one of the SDK's baked-in default
+          # feeds, so it only gets symlinked into package/feeds/ if
+          # named here (same lesson learned the hard way in
+          # pi-relay-control-openwrt's liblgpio).
+          PACKAGES: victron-ve-direct victron-ve-direct-collectd
+          V: s
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ipk-collectd-aarch64_cortex-a53
+          path: bin/packages/*/action/*.ipk
+          if-no-files-found: error
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: bin/packages/*/action/*.ipk
