@@ -46,15 +46,15 @@ jobs:
           # compiled code of this package's own that would differ
           # between architectures, so a second arch would only double
           # the cost for no extra coverage.
-          - arch: aarch64_cortex-a53-v24.10.4
-            name: aarch64_cortex-a53 (Pi 3/4-class, 24.10.4/opkg)
+          - arch: aarch64_cortex-a76-v24.10.4
+            name: aarch64_cortex-a76 (CM5/Pi 5-class, 24.10.4/opkg)
             ext: ipk
 
           # 25.12 switched OpenWrt's default package format from opkg
           # to apk -- built separately since the artifact extension
           # itself differs, same approach as build.yml.
-          - arch: aarch64_cortex-a53-v25.12.5
-            name: aarch64_cortex-a53 (Pi 3/4-class, 25.12.5/apk)
+          - arch: aarch64_cortex-a76-v25.12.5
+            name: aarch64_cortex-a76 (CM5/Pi 5-class, 25.12.5/apk)
             ext: apk
     steps:
       - uses: actions/checkout@v4

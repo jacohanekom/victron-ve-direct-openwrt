@@ -35,10 +35,11 @@ jobs:
 
           # Matches the actual deploy target this whole pi-relay-control /
           # victron-ve-direct project suite is built for: a Raspberry Pi
-          # 3/4-class (Cortex-A53) board running OpenWrt 24.10.4 (bcm27xx)
-          # instead of Debian/Alpine.
-          - arch: aarch64_cortex-a53-v24.10.4
-            name: aarch64_cortex-a53 (Pi 3/4-class, 24.10.4/opkg)
+          # Compute Module 5 (same BCM2712 SoC as the Pi 5, Cortex-A76
+          # -- not the Cortex-A53 in Pi 3/4) running OpenWrt 24.10.4
+          # (bcm27xx/bcm2712) instead of Debian/Alpine.
+          - arch: aarch64_cortex-a76-v24.10.4
+            name: aarch64_cortex-a76 (CM5/Pi 5-class, 24.10.4/opkg)
             ext: ipk
 
           # 25.12 switched OpenWrt's default package format from opkg
@@ -48,8 +49,8 @@ jobs:
             name: x86_64 (sanity check, 25.12.5/apk)
             ext: apk
 
-          - arch: aarch64_cortex-a53-v25.12.5
-            name: aarch64_cortex-a53 (Pi 3/4-class, 25.12.5/apk)
+          - arch: aarch64_cortex-a76-v25.12.5
+            name: aarch64_cortex-a76 (CM5/Pi 5-class, 25.12.5/apk)
             ext: apk
     steps:
       - uses: actions/checkout@v4

@@ -77,10 +77,11 @@ make package/victron-ve-direct-collectd/compile V=s
 All `.ipk`s land in `bin/packages/<arch>/victron-ve-direct/`. CI builds
 `victron-ve-direct` and `luci-app-victron-ve-direct` against **both**
 OpenWrt 24.10.4 (`opkg`/`.ipk`) and 25.12.5 (`apk`/`.apk` -- 25.12
-switched the default package format), each targeting `aarch64_cortex-a53`
-(Pi 3/4-class boards, this project suite's usual hardware) and `x86_64`
-as a fast generic sanity check -- four matrix entries in total. Grab
-whichever format matches your router's OpenWrt version.
+switched the default package format), each targeting `aarch64_cortex-a76`
+(Raspberry Pi Compute Module 5 / Pi 5, BCM2712 -- this project suite's
+usual hardware) and `x86_64` as a fast generic sanity check -- four
+matrix entries in total. Grab whichever format matches your router's
+OpenWrt version.
 
 `victron-ve-direct-collectd` is built by a **separate** workflow,
 [`build-collectd.yml`](.github/workflows/build-collectd.yml), not the
@@ -98,7 +99,7 @@ tagged release.
 
 Like the main workflow, it builds against both OpenWrt 24.10.4
 (`opkg`/`.ipk`) and 25.12.5 (`apk`/`.apk`), single-arch
-(`aarch64_cortex-a53`) for each -- there's no compiled code of this
+(`aarch64_cortex-a76`) for each -- there's no compiled code of this
 package's own that would differ between architectures, so a second
 arch per version would only double an already expensive build for no
 extra coverage.
