@@ -75,10 +75,12 @@ make package/victron-ve-direct-collectd/compile V=s
 ```
 
 All `.ipk`s land in `bin/packages/<arch>/victron-ve-direct/`. CI builds
-against OpenWrt 24.10.4 (still `opkg`/`.ipk` -- 25.12 switched the
-default package format to `apk`), targeting `aarch64_cortex-a53` (Pi
-3/4-class boards, this project suite's usual hardware) and `x86_64` as a
-fast generic sanity check.
+`victron-ve-direct` and `luci-app-victron-ve-direct` against **both**
+OpenWrt 24.10.4 (`opkg`/`.ipk`) and 25.12.5 (`apk`/`.apk` -- 25.12
+switched the default package format), each targeting `aarch64_cortex-a53`
+(Pi 3/4-class boards, this project suite's usual hardware) and `x86_64`
+as a fast generic sanity check -- four matrix entries in total. Grab
+whichever format matches your router's OpenWrt version.
 
 `victron-ve-direct-collectd` is built by a **separate** workflow,
 [`build-collectd.yml`](.github/workflows/build-collectd.yml), not the
@@ -218,6 +220,14 @@ with:
 The rpcd backend (`/usr/libexec/rpcd/luci.victron-ve-direct`) shells out
 to BusyBox `nc` to speak the daemon's TCP protocol, so it needs the `nc`
 applet enabled in BusyBox -- the default on stock OpenWrt builds.
+
+It also adds a "Victron VE.Direct" section to LuCI's main
+`Status -> Overview` dashboard (device identity, voltage/current/power,
+charge state, state of charge), reusing the same rpcd backend. This is
+a `view/status/include/*.js` drop-in -- `luci-mod-status`'s Overview
+page auto-discovers and loads these, so no extra menu entry or wiring
+was needed. The section hides itself entirely rather than show an
+empty table if the daemon isn't reachable yet.
 
 ## Service management
 
