@@ -15,10 +15,13 @@ jobs:
     # -nv suppresses wget's own progress reporting -- this isn't
     # caused by anything in this repo, just fail fast instead of
     # burning hours of runner time on a dead mirror. Sized against
-    # this matrix's two lightweight packages (~10-17m when healthy),
-    # not the much heavier victron-ve-direct-collectd (see PACKAGES
-    # below), which is deliberately excluded from CI.
-    timeout-minutes: 20
+    # this matrix's two lightweight packages, not the much heavier
+    # victron-ve-direct-collectd (see PACKAGES below), which is
+    # deliberately excluded from CI. The 25.12/apk entries run
+    # noticeably slower than 24.10/opkg (~15m vs ~10m observed, apk
+    # packaging/signing overhead plus a larger default kmod set) --
+    # sized with headroom above that, not just the faster opkg case.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -55,7 +58,7 @@ jobs:
 
       - name: Build via OpenWrt SDK
         uses: openwrt/gh-action-sdk@v11
-        timeout-minutes: 15
+        timeout-minutes: 25
         env:
           ARCH: ${{ matrix.arch }}
           # victron-ve-direct-collectd is deliberately NOT built here.
