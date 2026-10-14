@@ -93,8 +93,15 @@ Running that on every push would slow down and risk the main (fast,
 reliable) build, so `build-collectd.yml` only runs when files under
 `victron-ve-direct-collectd/` change, on `v*` tags, or on demand
 (Actions tab -> "Build collectd package" -> "Run workflow"). Grab the
-resulting `.ipk` from that workflow run's artifacts, or from a tagged
-release.
+resulting `.ipk`/`.apk` from that workflow run's artifacts, or from a
+tagged release.
+
+Like the main workflow, it builds against both OpenWrt 24.10.4
+(`opkg`/`.ipk`) and 25.12.5 (`apk`/`.apk`), single-arch
+(`aarch64_cortex-a53`) for each -- there's no compiled code of this
+package's own that would differ between architectures, so a second
+arch per version would only double an already expensive build for no
+extra coverage.
 
 ## Configuration
 

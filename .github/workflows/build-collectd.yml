@@ -31,12 +31,31 @@ on:
 
 jobs:
   build:
-    name: aarch64_cortex-a53 (Pi 3/4-class)
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     # Generous relative to build.yml's 20m: this package's own install
     # step is trivial, but collectd's dependency tree has been
     # observed taking 60-90+ minutes to fetch and compile.
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Only one arch per OpenWrt version here, matching this
+          # project suite's actual hardware target -- there's no
+          # compiled code of this package's own that would differ
+          # between architectures, so a second arch would only double
+          # the cost for no extra coverage.
+          - arch: aarch64_cortex-a53-v24.10.4
+            name: aarch64_cortex-a53 (Pi 3/4-class, 24.10.4/opkg)
+            ext: ipk
+
+          # 25.12 switched OpenWrt's default package format from opkg
+          # to apk -- built separately since the artifact extension
+          # itself differs, same approach as build.yml.
+          - arch: aarch64_cortex-a53-v25.12.5
+            name: aarch64_cortex-a53 (Pi 3/4-class, 25.12.5/apk)
+            ext: apk
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,12 +65,7 @@ jobs:
         uses: openwrt/gh-action-sdk@v11
         timeout-minutes: 110
         env:
-          # Only one arch here, matching this project suite's actual
-          # hardware target -- there's no compiled code of this
-          # package's own that would differ between architectures, so
-          # a second arch would only double the cost for no extra
-          # coverage.
-          ARCH: aarch64_cortex-a53-v24.10.4
+          ARCH: ${{ matrix.arch }}
           # victron-ve-direct must be listed explicitly even though
           # victron-ve-direct-collectd DEPENDS on it -- it lives in
           # our own feed, not one of the SDK's baked-in default
@@ -63,12 +77,12 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ipk-collectd-aarch64_cortex-a53
-          path: bin/packages/*/action/*.ipk
+          name: ${{ matrix.ext }}-collectd-${{ matrix.arch }}
+          path: bin/packages/*/action/*.${{ matrix.ext }}
           if-no-files-found: error
 
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: bin/packages/*/action/*.ipk
+          files: bin/packages/*/action/*.${{ matrix.ext }}
