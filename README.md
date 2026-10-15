@@ -229,14 +229,6 @@ The rpcd backend (`/usr/libexec/rpcd/luci.victron-ve-direct`) shells out
 to BusyBox `nc` to speak the daemon's TCP protocol, so it needs the `nc`
 applet enabled in BusyBox -- the default on stock OpenWrt builds.
 
-It also adds a "Victron VE.Direct" section to LuCI's main
-`Status -> Overview` dashboard (device identity, voltage/current/power,
-charge state, state of charge), reusing the same rpcd backend. This is
-a `view/status/include/*.js` drop-in -- `luci-mod-status`'s Overview
-page auto-discovers and loads these, so no extra menu entry or wiring
-was needed. The section hides itself entirely rather than show an
-empty table if the daemon isn't reachable yet.
-
 ## Service management
 
 ```sh
